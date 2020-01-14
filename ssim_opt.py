@@ -28,8 +28,7 @@ def root_function(minimize=False, img, _lambda, iters=50, sigma=30):
     prev_img = np.copy(adv_x)
     
     for i in range(iters):
-
-        #      ----------------- step 1 -----------------
+        # ----------------- step 1 -----------------
         grad = ssim(img, adv_x, multichannel=True, gradient=True)[1].flatten()
         grad = np.expand_dims(grad, axis=1) 
 
@@ -46,9 +45,8 @@ def root_function(minimize=False, img, _lambda, iters=50, sigma=30):
         else:
             adv_x = adv_x + update
             
-        #      ----------------- step 2 -----------------
+        # ----------------- step 2 -----------------
         adv_x = np.clip(img + _lambda * E(img, adv_x), 0, 1)
-
 
         # ----------- Conditional update -----------
         ssim_score = ssim(img, adv_x, multichannel=True)
@@ -59,8 +57,6 @@ def root_function(minimize=False, img, _lambda, iters=50, sigma=30):
         else:
             prev_img = np.copy(adv_x)
             prev_ssim = ssim_score
-            
-        
 
     return adv_x
     
