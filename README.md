@@ -9,6 +9,6 @@ In the original paper, the algorithm is written as:
 
 I have rewritten the first step for computational efficiency purposes as:
 
-![equation](/images/eq_1.png)
+![equation](/images/eq_new.png)
 
 This reduces space used in memory from O(n^2) to O(n)
