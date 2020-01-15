@@ -7,7 +7,7 @@ In the original paper, the algorithm is written as:
 
 ![equation](/images/eq_12.png)
 
-I have rewritten the first step for computational efficiency purposes as:
+In the implementation above, the first step is rewritten for efficiency:
 
 ![equation](/images/eq_new.png)
 
