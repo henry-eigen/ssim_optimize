@@ -1,10 +1,14 @@
 import numpy as np
 from numpy.linalg import norm
 
-from skimage.metrics._structural_similarity import structural_similarity as ssim
+from skimage.metrics._structural_similarity import (
+    structural_similarity
+    as ssim
+)
 
 def E(X, Y):
     return (Y - X) / norm(Y - X)
+
 
 # Returns reference image with random noise at specified epsilon
 def add_noise(img, eps):
@@ -18,7 +22,7 @@ def add_noise(img, eps):
 def get_update(img, adv_x, sigma):
     grad = ssim(img, adv_x, multichannel=True, gradient=True)[1].flatten()
     grad = np.expand_dims(grad, axis=1)
-    
+
     diff = E(img, adv_x).flatten()
     diff = np.expand_dims(diff, axis=1)
 
@@ -26,8 +30,9 @@ def get_update(img, adv_x, sigma):
 
     update = sigma * (grad - diff.dot((diff_t.dot(grad))))
     update = update.reshape(adv_x.shape)
-    
+
     return update
+
 
 def optimize_func(img, op, _lambda, iters, sigma):
     if len(img.shape) != 3:
@@ -73,12 +78,10 @@ def optimize_func(img, op, _lambda, iters, sigma):
     """
 
     if len(img.shape) != 3:
-        raise ValueError(
-            "Array should have dimensions (width, height, channel)\n")
+        raise ValueError("Array should have dims (width, height, channel)\n")
 
     if np.max(img) > 1.0:
-        raise ValueError(
-            "Array values should me in range [0, 1]")
+        raise ValueError("Array values should me in range [0, 1]")
 
     # create initial noisy image
     adv_x = add_noise(img, _lambda)
@@ -88,7 +91,7 @@ def optimize_func(img, op, _lambda, iters, sigma):
     prev_img = np.copy(adv_x)
 
     for i in range(iters):
-        
+
         # ----------------- step 1 -----------------
 
         # get gradient update
@@ -98,7 +101,7 @@ def optimize_func(img, op, _lambda, iters, sigma):
         adv_x = op(adv_x, update)
 
         # ----------------- step 2 -----------------
-        
+
         # update noisy image
         adv_x = np.clip(img + _lambda * E(img, adv_x), 0, 1)
 
@@ -122,9 +125,15 @@ def optimize_func(img, op, _lambda, iters, sigma):
 
     return adv_x
 
+
 # helper functions to pass ops as parameters
-add = lambda x, y: x + y
-sub = lambda x, y: x - y
+def add(x, y):
+    return x + y
+
+
+def sub(x, y):
+    return x - y
+
 
 def minimize_ssim(img, _lambda, iters=50, sigma=30):
     adv_x = optimize_func(img, sub, _lambda, iters, sigma)
