@@ -6,6 +6,28 @@ from skimage.metrics._structural_similarity import structural_similarity as ssim
 def E(X, Y):
     return (Y - X) / norm(Y - X)
 
+# Returns reference image with random noise at specified epsilon
+def add_noise(img, eps):
+    noise = np.random.random_sample(img.shape)
+    noise = noise * eps / norm(noise)
+    with_noise = np.clip(img + noise, 0, 1)
+    return with_noise
+
+
+# Returns next step of gradient descent/ascent
+def get_update(img, adv_x, sigma):
+    grad = ssim(img, adv_x, multichannel=True, gradient=True)[1].flatten()
+    grad = np.expand_dims(grad, axis=1)
+    
+    diff = E(img, adv_x).flatten()
+    diff = np.expand_dims(diff, axis=1)
+
+    diff_t = diff.T
+
+    update = sigma * (grad - diff.dot((diff_t.dot(grad))))
+    update = update.reshape(adv_x.shape)
+    
+    return update
 
 def optimize_func(minimize, img, _lambda, iters, sigma):
     if len(img.shape) != 3:
@@ -58,25 +80,15 @@ def optimize_func(minimize, img, _lambda, iters, sigma):
         raise ValueError(
             "Array values should me in range [0, 1]")
 
-    noise = np.random.randint(0, 255, size=img.shape) / 255.
-    noise = noise * _lambda / norm(noise)
-    adv_x = np.clip(img + noise, 0, 1)
+    adv_x = add_noise(img, _lambda)
 
     prev_ssim = ssim(img, adv_x, multichannel=True)
     prev_img = np.copy(adv_x)
 
     for i in range(iters):
         # ----------------- step 1 -----------------
-        grad = ssim(img, adv_x, multichannel=True, gradient=True)[1].flatten()
-        grad = np.expand_dims(grad, axis=1)
 
-        diff = E(img, adv_x).flatten()
-        diff = np.expand_dims(diff, axis=1)
-
-        diff_t = diff.T
-
-        update = sigma * (grad - diff.dot((diff_t.dot(grad))))
-        update = update.reshape(adv_x.shape)
+        update = get_update(img, adv_x, sigma)
 
         if minimize:
             adv_x = adv_x - update
@@ -106,6 +118,9 @@ def optimize_func(minimize, img, _lambda, iters, sigma):
 
     return adv_x
 
+# helper functions to pass ops as parameters
+add = lambda x, y: x + y
+sub = lambda x, y: x - y
 
 def minimize_ssim(img, _lambda, iters=50, sigma=30):
     adv_x = optimize_func(True, img, _lambda, iters, sigma)
