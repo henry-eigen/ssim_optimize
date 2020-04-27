@@ -29,7 +29,7 @@ def get_update(img, adv_x, sigma):
     
     return update
 
-def optimize_func(minimize, img, _lambda, iters, sigma):
+def optimize_func(img, op, _lambda, iters, sigma):
     if len(img.shape) != 3:
         img = img[0]
 
@@ -80,28 +80,32 @@ def optimize_func(minimize, img, _lambda, iters, sigma):
         raise ValueError(
             "Array values should me in range [0, 1]")
 
+    # create initial noisy image
     adv_x = add_noise(img, _lambda)
 
+    # save starting ssim
     prev_ssim = ssim(img, adv_x, multichannel=True)
     prev_img = np.copy(adv_x)
 
     for i in range(iters):
+        
         # ----------------- step 1 -----------------
 
+        # get gradient update
         update = get_update(img, adv_x, sigma)
 
-        if minimize:
-            adv_x = adv_x - update
-        else:
-            adv_x = adv_x + update
+        # add or subtract gradient for ascent or descent respectively
+        adv_x = op(adv_x, update)
 
         # ----------------- step 2 -----------------
+        
+        # update noisy image
         adv_x = np.clip(img + _lambda * E(img, adv_x), 0, 1)
 
         # ----------- Conditional update -----------
         ssim_score = ssim(img, adv_x, multichannel=True)
 
-        if minimize:
+        if op == sub:
             if ssim_score > prev_ssim:
                 adv_x = np.copy(prev_img)
                 sigma *= 0.9
@@ -123,10 +127,10 @@ add = lambda x, y: x + y
 sub = lambda x, y: x - y
 
 def minimize_ssim(img, _lambda, iters=50, sigma=30):
-    adv_x = optimize_func(True, img, _lambda, iters, sigma)
+    adv_x = optimize_func(img, sub, _lambda, iters, sigma)
     return adv_x
 
 
 def maximize_ssim(img, _lambda, iters=50, sigma=30):
-    adv_x = optimize_func(False, img, _lambda, iters, sigma)
+    adv_x = optimize_func(img, add, _lambda, iters, sigma)
     return adv_x
